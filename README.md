@@ -6,33 +6,15 @@ A hands-on infrastructure lab that provisions a production-like AWS environment 
 
 ## What This Lab Does
 
-The lab spins up a highly available web application stack on AWS and automatically triggers two realistic failure scenarios on one of the EC2 instances. Students must use AWS monitoring tools to detect, investigate, and fix the issues — mirroring what an engineer would do during an on-call incident.
+The lab spins up a highly available web application stack on AWS and automatically triggers two realistic failure scenarios on one of the EC2 instances. You must use AWS monitoring tools to detect, investigate, and fix the issues — mirroring what an engineer would do during an on-call incident.
 
 ---
 
 ## Architecture Overview
 
-```
-Internet
-    │
-    ▼
-Application Load Balancer
-    │
-    ├──────────────────────┐
-    ▼                      ▼
-EC2 — AZ 1            EC2 — AZ 2
-(Apache)              (Apache)
-    └──────────────────────┘
-              │
-              ▼
-      Auto Scaling Group
-              │
-              ▼
-    CloudWatch (CPU monitoring)
-              │
-              ▼
-       SNS Email Alerts
-```
+
+<img width="928" height="627" alt="image" src="https://github.com/user-attachments/assets/31ad2318-d5d6-4b57-affb-711090a4e689" />
+
 
 **Resources provisioned:**
 
