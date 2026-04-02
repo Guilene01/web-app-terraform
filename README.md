@@ -1,208 +1,262 @@
-Terraform AWS Highly Available Web Application Lab
-This project demonstrates how to design and troubleshoot a highly available web application infrastructure on AWS using Terraform.
-The environment includes:
-AWS VPC with public subnets across multiple Availability Zones
-EC2 web servers running Apache
-Application Load Balancer distributing traffic
-CloudWatch monitoring and alerting
+# Terraform AWS Highly Available Web Application Lab
 
-SNS email notifications
+A hands-on infrastructure lab that provisions a production-like AWS environment using Terraform, then deliberately introduces failures so students can practice real-world incident investigation and recovery.
 
-Automated incident simulation
+---
 
-The lab intentionally generates realistic infrastructure and application failures to allow students to practice troubleshooting production-like incidents.
+## What This Lab Does
 
-Failure Scenarios
+The lab spins up a highly available web application stack on AWS and automatically triggers two realistic failure scenarios on one of the EC2 instances. Students must use AWS monitoring tools to detect, investigate, and fix the issues — mirroring what an engineer would do during an on-call incident.
 
-Two automated failures are triggered on one EC2 instance:
+---
 
-CPU Stress Event
+## Architecture Overview
 
-High CPU utilization is generated using stress-ng
-
-CloudWatch detects abnormal CPU usage
-
-SNS sends alerts
-
-Application Failure
-
-Apache service is stopped automatically
-
-Load Balancer marks the instance unhealthy
-
-Traffic is routed to the healthy instance
-
-Students must investigate monitoring tools and restore the system.
-
-Technologies Used
-
-AWS
-
-Terraform
-
-EC2
-
+```
+Internet
+    │
+    ▼
 Application Load Balancer
+    │
+    ├──────────────────────┐
+    ▼                      ▼
+EC2 — AZ 1            EC2 — AZ 2
+(Apache)              (Apache)
+    └──────────────────────┘
+              │
+              ▼
+      Auto Scaling Group
+              │
+              ▼
+    CloudWatch (CPU monitoring)
+              │
+              ▼
+       SNS Email Alerts
+```
 
-CloudWatch
+**Resources provisioned:**
 
-SNS
+- VPC with public subnets across two Availability Zones
+- Two EC2 instances running Apache HTTP Server (Amazon Linux 2023)
+- Application Load Balancer with health checks
+- CloudWatch alarms for CPU utilisation
+- SNS topic for email notifications
+- Automated failure simulation scripts
 
-Linux (Amazon Linux 2023)
+---
 
-Apache HTTP Server
+## Failure Scenarios
 
-Skills Demonstrated
+Two failures are injected automatically on one EC2 instance:
 
-Infrastructure as Code
+### 1 — CPU Stress Event
 
-High Availability Architecture
+A `stress-ng` process drives CPU utilisation to abnormal levels. CloudWatch detects the spike and fires an SNS alert to notify the student.
 
-Cloud Monitoring
+### 2 — Application Failure
 
-Incident Response
+The Apache service is stopped programmatically. The Load Balancer's health checks detect the unresponsive instance and remove it from rotation, directing all traffic to the healthy instance.
 
-Root Cause Analysis
+Students must investigate both failures, identify root causes, and restore the system to a healthy state.
 
-Service Recovery
+---
 
-Vertical Scaling
+## Prerequisites
 
-3. Student Troubleshooting Worksheet
+- AWS account with sufficient IAM permissions (EC2, VPC, ALB, CloudWatch, SNS)
+- [Terraform](https://developer.hashicorp.com/terraform/install) >= 1.0
+- AWS CLI configured (`aws configure`)
+- An email address to receive SNS alerts
 
-You can give this to students during the lab.
+---
 
-Troubleshooting Lab Worksheet
-Objective
+## Getting Started
 
-Investigate alerts and restore system health after simulated failures.
+```bash
+# Clone the repository
+git clone <repo-url>
+cd <repo-directory>
 
-Step 1 — Observe the System
+# Initialise Terraform
+terraform init
 
-Open the application using the Load Balancer DNS.
+# Preview the changes
+terraform plan
 
-Questions:
-
-Are both servers responding?
-
-Which server names appear in the page?
-
-Step 2 — Monitor CPU Metrics
-
-Go to:
-
-CloudWatch → Metrics → EC2 → CPUUtilization
-
-Questions:
-
-Which instance shows high CPU?
-
-What is the peak CPU percentage?
-
-How long does the spike last?
-
-Step 3 — Check CloudWatch Alarms
-
-Go to:
-
-CloudWatch → Alarms
-
-Questions:
-
-Which alarms triggered?
-
-What metric caused the alarm?
-
-Step 4 — Check Load Balancer Health
-
-Navigate to:
-
-EC2 → Target Groups → Targets
-
-Questions:
-
-Which instance is unhealthy?
-
-What is the health check status?
-
-Step 5 — Investigate the Instance
-
-SSH into the failing instance.
-
-Check Apache status:
-
-sudo systemctl status httpd
-
-Questions:
-
-Is Apache running?
-
-If not, what error message appears?
-
-Step 6 — Check Running Processes
-top
-
-or
-
-ps aux | grep stress
-
-Questions:
-
-Is the CPU stress process still running?
-
-Which process is using the most CPU?
-
-Step 7 — Fix the Problem
-
-Restart Apache:
-
-sudo systemctl start httpd
-
-Verify:
-
-sudo systemctl status httpd
-Step 8 — Verify Recovery
-
-After fixing the issue:
-
-Check:
-
-Load balancer target health
-
-CloudWatch alarms
-
-application availability
-
-Questions:
-
-Did the instance return to healthy?
-
-Did the alarm state return to OK?
-
-Step 9 — Scaling Exercise
-
-Modify the instance size:
-
-t2.micro → t3.medium
-
-Run:
-
+# Deploy the infrastructure
 terraform apply
+```
 
-Questions:
+After `apply` completes, Terraform outputs the Load Balancer DNS name. Open it in a browser to verify both servers are responding. The failure simulation starts automatically within a few minutes.
 
-How does instance size affect CPU utilization?
+---
 
-When should vertical scaling be used?
+## Technologies Used
 
-Learning Reflection
+| Category | Tool / Service |
+|---|---|
+| Infrastructure as Code | Terraform |
+| Compute | AWS EC2 (Amazon Linux 2023) |
+| Load Balancing | AWS Application Load Balancer |
+| Monitoring | AWS CloudWatch |
+| Alerting | AWS SNS |
+| Web Server | Apache HTTP Server |
+| Stress Testing | stress-ng |
 
-Students should explain:
+---
 
-What caused the initial failure?
+## Skills Demonstrated
 
-Why did the load balancer keep the application online?
+- Infrastructure as Code with Terraform
+- High availability architecture across multiple AZs
+- Cloud monitoring and alarm configuration
+- Incident detection, investigation, and response
+- Root cause analysis
+- Service recovery procedures
+- Vertical scaling with Terraform
 
-What monitoring tools helped detect the issue?
+---
 
-How was the system recovered?
+## Student Troubleshooting Worksheet
+
+Work through each step in order. Record your findings as you go.
+
+---
+
+### Objective
+
+Investigate CloudWatch alerts and restore full system health after simulated failures.
+
+---
+
+### Step 1 — Observe the System
+
+Open the application using the Load Balancer DNS name.
+
+- Are both servers responding?
+- Which server names appear on the page?
+
+---
+
+### Step 2 — Check CPU Metrics
+
+Navigate to: **CloudWatch → Metrics → EC2 → CPUUtilization**
+
+- Which instance shows elevated CPU?
+- What is the peak CPU percentage?
+- How long does the spike last?
+
+---
+
+### Step 3 — Check CloudWatch Alarms
+
+Navigate to: **CloudWatch → Alarms**
+
+- Which alarms have triggered?
+- What metric caused the alarm state?
+
+---
+
+### Step 4 — Check Load Balancer Health
+
+Navigate to: **EC2 → Target Groups → Targets**
+
+- Which instance is marked unhealthy?
+- What is the health check status message?
+
+---
+
+### Step 5 — Investigate the Instance
+
+SSH into the failing instance and check the Apache service:
+
+```bash
+sudo systemctl status httpd
+```
+
+- Is Apache running?
+- If not, what error message is shown?
+
+---
+
+### Step 6 — Check Running Processes
+
+```bash
+top
+# or
+ps aux | grep stress
+```
+
+- Is the CPU stress process still running?
+- Which process is consuming the most CPU?
+
+---
+
+### Step 7 — Fix the Problem
+
+Restart Apache and confirm it is running:
+
+```bash
+sudo systemctl start httpd
+sudo systemctl status httpd
+```
+
+---
+
+### Step 8 — Verify Recovery
+
+After restarting Apache, check the following:
+
+- Load Balancer target health (both instances healthy?)
+- CloudWatch alarm state (returned to OK?)
+- Application availability via the Load Balancer DNS
+
+---
+
+### Step 9 — Scaling Exercise
+
+Modify the instance type in your Terraform configuration:
+
+```hcl
+# Change from
+instance_type = "t2.micro"
+
+# To
+instance_type = "t3.medium"
+```
+
+Then apply:
+
+```bash
+terraform apply
+```
+
+- How does the larger instance type affect CPU utilisation under the same load?
+- In what situations would vertical scaling be the right choice versus horizontal scaling?
+
+---
+
+### Learning Reflection
+
+After completing the lab, write a short summary covering:
+
+1. What caused the initial failure on the unhealthy instance?
+2. Why did the Load Balancer keep the application available despite the failure?
+3. Which monitoring tools were most useful for diagnosing the issue?
+4. What steps restored the system, and in what order did you perform them?
+
+---
+
+## Cleanup
+
+To avoid ongoing AWS charges, destroy the infrastructure when finished:
+
+```bash
+terraform destroy
+```
+
+---
+
+## License
+
+MIT
